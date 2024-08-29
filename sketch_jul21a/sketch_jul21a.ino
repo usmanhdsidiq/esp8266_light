@@ -219,7 +219,7 @@ void loop() {
   int pirState2 = digitalRead(pirPin2);
 
   if (autoSwitch == true) {
-    if ((hours >= 18) && (hours <= 22)) {
+    if ((hours >= 18) && (hours <= 22)) { // If you want to enable the sensor, configure it here
       Serial.println(" [Auto]Lamp On | 6p.m - 11p.m");
       digitalWrite(lampPin, LOW);
     } else {
