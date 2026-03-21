@@ -5,7 +5,7 @@
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebSrv.h>
 #include <WiFiUdp.h>
-#include <NTPClient.h>
+#include <NTPClient.h> //Version 3.2.1 by Fabrice
 #include <TimeLib.h>
 #include <Timezone.h>
 #include <ArduinoOTA.h>
@@ -15,19 +15,19 @@ const char* password = "Depressed0822"; //your WiFi password
 WiFiEventHandler wifiConnectHandler;
 WiFiEventHandler wifiDisconnectHandler;
 
-const char* ntpServer = "asia.pool.ntp.org"; //your NTP Server
-const long timeZoneOffset = 25200; //To define GMT+7 timezone
+const char* ntpServer = "192.168.2.1"; //Connect to local NTP server
+// const long timeZoneOffset = 25200L; //To define GMT+7 timezone
 //to define your time offset: timezone*3600
 
 WiFiClient wifiClient;
 WiFiUDP udpClient;
 
-NTPClient timeClient(udpClient, ntpServer, timeZoneOffset);
+NTPClient timeClient(udpClient, ntpServer, 25200L); // Use offset 0 instead of 7 (get real UTC time)
 
 bool autoSwitch = true;
 bool manualSwitch = false;
 
-const int lampPin = 14;
+const int lampPin = 14; // Originally use 14, another is for debugging
 const int wifiLight = 2;
 const int pirPin1 = 5;
 const int pirPin2 = 4;
@@ -104,8 +104,16 @@ ArduinoOTA.onStart([](){
 //////////////////////////////////////////////////////////////////
 ////////////////////// NTP CONFIGURATION //////////////////////
   timeClient.begin();
-  timeClient.setTimeOffset(timeZoneOffset);
-  timeClient.update();
+  // timeClient.setTimeOffset(timeZoneOffset);
+  timeClient.forceUpdate();
+
+  // Wait a bit for NTP sync
+  unsigned long waitNtp = millis();
+  while (!timeClient.update() && millis() - waitNtp < 15000) {
+    delay(500);
+    Serial.print("-");
+  }
+    Serial.println("NTP Synced");
 //////////////////////////////////////////////////////////////////
 ////////////////////// WEB SERVER CONFIGURATION //////////////////
   //start the web server
@@ -155,7 +163,8 @@ server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
         <br>
         <p>Automatic time: 18.00 - 23.00 UTC+7</p>
         <small>Updated May 25, 2024 | The sensors were disabled because of malfunctions.</small><br>
-		<small>Updated August 30, 2024 | Added a simple authentication.</small><br>
+		    <small>Updated August 30, 2024 | Added a simple authentication.</small><br>
+        <small>Updated March 21, 2026 | Fix time missmatch to internet NTP, and connect to router's NTP server instead</small><br>
         <small>HDLabs_[Warning] This project is under development</small>
 		<script type="text/javascript">
 			const onPassword = "0822on";
@@ -209,7 +218,6 @@ server.on("/off", HTTP_GET, [](AsyncWebServerRequest *request){
 void loop() {
   ArduinoOTA.handle();
   timeClient.update();
-  // server.handleClient();
 
   int hours = timeClient.getHours();
   int minutes = timeClient.getMinutes();
